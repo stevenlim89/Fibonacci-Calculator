@@ -11,71 +11,81 @@ module fibonacci_calculator (input_s, reset_n, begin_fibo, clk, done, fibo_out) 
 	reg [15:0] next_regB;
 	reg [15:0] next_reg_out;
 	
-	reg [15:0] cur_regA = 16'd0;
-	reg [15:0] cur_regB = 16'd1;
+	reg [15:0] cur_regA = 16'd1;
+	reg [15:0] cur_regB = 16'd0;
 	reg [15:0] cur_num = 16'd0;
-
-	reg Z, CURRENT_STATE, NEXT_STATE;
 	
-parameter s0=0, s1=1, s2=2, s3=3; //parameters used to declare states
+	reg [15:0] zero_reg = 16'd0;
+	reg [15:0] one_reg = 16'd1;
 
-always @ (*)
-begin
+	reg [4:0] counter = 5'b0;
+	reg fibo_out, CURRENT_STATE, NEXT_STATE;
+	
+	parameter IDLE_STATE=0, CASE_ZERO=1, CASE_ONE=2, CALCULATE=3; //parameters used to declare states
+
+always @ (CURRENT_STATE or begin_fibo)
 	case(CURRENT_STATE)
-		s0: begin
-			 Z = 0;
-			 if(begin_fibo == 1)			 
-				NEXT_STATE = s1;
-			 else
-				NEXT_STATE = s0;
-				
-			 next_reg_out = cur_regA;
-			 end
+		IDLE_STATE: begin
+						$display("Printing from IDLE_STATE, CURRENT_STATE is: %d\n", CURRENT_STATE);
+						if(begin_fibo == 1)	
+							begin
+							NEXT_STATE = CASE_ZERO;
+							end
+						else
+							NEXT_STATE = IDLE_STATE;
+						end
 			 
-		s1: begin
-			 Z = 1;
-			 if(begin_fibo == 1)
-				NEXT_STATE = s2;
-			 else
-				 NEXT_STATE = s1;
-				next_reg_out = cur_regB;
-			 end
+		CASE_ZERO: 	begin
+						$display("Printing from CASE_ZERO, CURRENT_STATE is: %d\n", CURRENT_STATE);
+						if(input_s > 0)
+							NEXT_STATE = CASE_ONE;
+						else
+							begin
+							NEXT_STATE = IDLE_STATE;
+							fibo_out = zero_reg;
+							end
+						end
 			 
-		s2: begin
-			 Z = 2;
-			 if(begin_fibo == 1)
-		 		 NEXT_STATE = s3;
-			 else
-				 NEXT_STATE = s2;
-			 next_reg_out = cur_regA + cur_regB;
-			 next_regA = cur_regB;
-			 next_regB = next_reg_out;
-			 end
+		CASE_ONE: 	begin
+						$display("Printing from CASE_ONE, CURRENT_STATE is: %d\n", CURRENT_STATE);
+						if(input_s > 1)
+							NEXT_STATE = CALCULATE;
+						else
+							begin
+							NEXT_STATE = IDLE_STATE;
+							fibo_out = one_reg;
+							end
+						end
 			
-		s3: begin
-			 Z = 3;
-			 if(begin_fibo == 1)
-				 NEXT_STATE = s2;
-			 else
-				 NEXT_STATE = s3;
-			 done = 1'b1;
-			 next_reg_out = cur_num;
-			 end
+		CALCULATE: 	begin
+						$display("Printing from CALCULATE, CURRENT STATE is: %d\n", CURRENT_STATE);
+						counter = counter + 1;
+						cur_regA = cur_regA + cur_regB;
+						cur_regB = cur_regA - cur_regB;
+						 
+						 
+						if(counter == input_s)
+							begin
+							NEXT_STATE = IDLE_STATE;
+							next_reg_out = cur_regA;
+							done = 1'b1;
+							end
+							
+						end
 	
 	endcase
-end
 	
 always @ (posedge clk or negedge reset_n)
 begin
 
 if(!reset_n)
-	CURRENT_STATE <= s0;
+	CURRENT_STATE <= IDLE_STATE;
 
 else
 	CURRENT_STATE <= NEXT_STATE;
 
 end
 
-assign fibo_out = next_reg_out;
+//assign fibo_out = next_reg_out;
 
 endmodule
